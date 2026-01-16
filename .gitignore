@@ -1,0 +1,37 @@
+# Translated files
+/source/*
+/translated/*
+!/translated/.gitkeep
+
+# Logs
+/logs/*
+!/logs/.gitkeep
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Vendor (if using Composer)
+/vendor/
+
+# Environment configuration
+.env
+.env.local
+config.local.php
+
+# Docker
+.docker/
+docker-compose.override.yml
+

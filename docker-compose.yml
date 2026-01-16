@@ -1,0 +1,32 @@
+services:
+  doc-translate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: doc-translate-app
+    ports:
+      - "8087:80"
+    volumes:
+      # Mount translated files and logs as volumes for persistence
+      - ./source:/var/www/html/source
+      - ./translated:/var/www/html/translated
+      - ./logs:/var/www/html/logs
+      # Mount .env file for DeepL API configuration
+      - ./.env:/var/www/html/.env:ro
+      # Optional: Mount source code for development (uncomment for hot reload)
+      - ./api:/var/www/html/api
+      - ./assets:/var/www/html/assets
+      - ./index.php:/var/www/html/index.php
+    environment:
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+      # DeepL API configuration (can also be set in .env file)
+      # - DEEPL_API_KEY=${DEEPL_API_KEY}
+      # - DEEPL_API_URL=${DEEPL_API_URL}
+    restart: unless-stopped
+    networks:
+      - doc-translate-network
+
+networks:
+  doc-translate-network:
+    driver: bridge

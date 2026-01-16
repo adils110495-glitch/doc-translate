@@ -1,0 +1,45 @@
+# Git files
+.git
+.gitignore
+
+# Documentation (included in image)
+# README.md
+# QUICKSTART.md
+
+# IDE files
+.vscode
+.idea
+*.sublime-*
+.claude
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Node modules (if any)
+node_modules
+
+# Vendor (if using Composer)
+vendor
+
+# Environment files
+.env
+.env.local
+
+# Docker files
+.dockerignore
+
+# Logs and translated files (mounted as volumes)
+logs/*
+translated/*
+
+# Keep .gitkeep files
+!logs/.gitkeep
+!translated/.gitkeep
