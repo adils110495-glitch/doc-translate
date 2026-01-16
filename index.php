@@ -108,18 +108,18 @@
                     <label for="target-language">Target Language *</label>
                     <select id="target-language" name="target_language" required>
                         <option value="">Select Language</option>
-                        <option value="EN-US">English (US)</option>
-                        <option value="EN-GB">English (UK)</option>
-                        <option value="ES">Spanish</option>
-                        <option value="FR">French</option>
+                        <option value="EN-US">English</option>
+                        <option value="DA">Danish</option>
+                        <option value="NL">Dutch</option>
+                        <option value="ET">Estonian</option>
+                        <option value="FI">Finnish</option>
                         <option value="DE">German</option>
-                        <option value="IT">Italian</option>
-                        <option value="PT">Portuguese</option>
+                        <option value="IS">Icelandic</option>
+                        <option value="LV">Latvian</option>
+                        <option value="NB">Norwegian</option>
+                        <option value="RO">Romanian</option>
                         <option value="RU">Russian</option>
-                        <option value="ZH">Chinese</option>
-                        <option value="JA">Japanese</option>
-                        <option value="KO">Korean</option>
-                        <option value="AR">Arabic</option>
+                        <option value="SV">Swedish</option>
                     </select>
                 </div>
 

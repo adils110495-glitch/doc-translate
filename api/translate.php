@@ -52,7 +52,7 @@ try {
     }
 
     // Validate language
-    $validLanguages = ['EN-US', 'EN-GB', 'ES', 'FR', 'DE', 'IT', 'PT', 'RU', 'ZH', 'JA', 'KO', 'AR'];
+    $validLanguages = ['EN-US', 'DA', 'NL', 'ET', 'FI', 'DE', 'IS', 'LV', 'NB', 'RO', 'RU', 'SV'];
     if (!in_array($targetLanguage, $validLanguages)) {
         throw new Exception('Invalid target language');
     }

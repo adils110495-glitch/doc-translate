@@ -7,6 +7,27 @@ toastr.options = {
     "extendedTimeOut": "1000"
 };
 
+// Language code to full name mapping
+const languageNames = {
+    'EN-US': 'English',
+    'DA': 'Danish',
+    'NL': 'Dutch',
+    'ET': 'Estonian',
+    'FI': 'Finnish',
+    'DE': 'German',
+    'IS': 'Icelandic',
+    'LV': 'Latvian',
+    'NB': 'Norwegian',
+    'RO': 'Romanian',
+    'RU': 'Russian',
+    'SV': 'Swedish'
+};
+
+// Get full language name from code
+function getLanguageName(code) {
+    return languageNames[code] || code;
+}
+
 // Load translated files on page load
 $(document).ready(function() {
     loadTranslatedFiles();
@@ -152,19 +173,33 @@ function populateSourceFilesDropdown(files) {
 
     for (const project in files) {
         const projectGroup = $('<optgroup label="' + escapeHtml(project) + '">');
-        
+
         for (const topic in files[project]) {
             files[project][topic].forEach(function(file) {
                 projectGroup.append(
-                    '<option value="' + escapeHtml(file.path) + '">' +
+                    '<option value="' + escapeHtml(file.path) + '" data-project="' + escapeHtml(project) + '" data-topic="' + escapeHtml(topic) + '">' +
                     escapeHtml(topic) + ' / ' + escapeHtml(file.name) +
                     '</option>'
                 );
             });
         }
-        
+
         select.append(projectGroup);
     }
+
+    // Add change handler to prefill project and topic
+    select.off('change').on('change', function() {
+        const selectedOption = $(this).find('option:selected');
+        const project = selectedOption.data('project');
+        const topic = selectedOption.data('topic');
+
+        if (project) {
+            $('#project-name').val(project);
+        }
+        if (topic) {
+            $('#topic-name').val(topic);
+        }
+    });
 }
 
 // Load translated files
@@ -216,7 +251,7 @@ function displayFiles(files) {
                 html += '<input type="checkbox" class="file-checkbox" data-path="' + escapeHtml(file.path) + '">';
                 html += '<div class="file-info">';
                 html += '<div class="file-name">' + escapeHtml(file.name) + '</div>';
-                html += '<div class="file-meta">Language: ' + escapeHtml(file.language) + ' | ' + escapeHtml(file.date) + '</div>';
+                html += '<div class="file-meta">' + getLanguageName(file.language) + ' | ' + escapeHtml(file.date) + '</div>';
                 html += '</div>';
                 html += '<div class="file-actions">';
                 html += '<button class="icon-btn btn-download-file" onclick="downloadFile(\'' + escapeHtml(file.path) + '\')" title="Download">';
