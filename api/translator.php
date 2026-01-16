@@ -4,12 +4,14 @@
  * Document Translator
  * Translates DOCX documents using DeepL API (via official PHP SDK) while preserving layout and formatting
  * Uses paragraph-level translation for better context
+ * Applies bold formatting to fixed words from fixed-words.json
  */
 class DocumentTranslator {
 
     private $deeplApiKey;
     private $deeplApiUrl;
     private $translator;
+    private $fixedWords = [];
 
     public function __construct() {
         // Load Composer autoloader if available
@@ -17,6 +19,9 @@ class DocumentTranslator {
 
         // Load environment variables from .env file
         $this->loadEnv();
+
+        // Load fixed words for bold formatting
+        $this->loadFixedWords();
 
         // Get DeepL API credentials
         $this->deeplApiKey = getenv('DEEPL_API_KEY');
@@ -83,6 +88,59 @@ class DocumentTranslator {
                 }
             }
         }
+    }
+
+    /**
+     * Load fixed words from JSON file
+     */
+    private function loadFixedWords() {
+        $fixedWordsFile = dirname(__DIR__) . '/fixed-words.json';
+
+        if (file_exists($fixedWordsFile)) {
+            $content = file_get_contents($fixedWordsFile);
+            $data = json_decode($content, true);
+
+            if ($data) {
+                $this->fixedWords = $data;
+            }
+        }
+    }
+
+    /**
+     * Get all fixed words/phrases for a specific language
+     *
+     * @param string $languageCode Target language code
+     * @return array Array of words/phrases to make bold
+     */
+    private function getFixedWordsForLanguage($languageCode) {
+        $langCode = strtolower($languageCode);
+        
+        // Handle language code variations
+        if (strpos($langCode, '-') !== false) {
+            $langCode = explode('-', $langCode)[0];
+        }
+        
+        // Map NB (Norwegian Bokmål) to no
+        if ($langCode === 'nb') {
+            $langCode = 'no';
+        }
+
+        $words = [];
+
+        foreach ($this->fixedWords as $term => $translations) {
+            if (isset($translations[$langCode]) && is_array($translations[$langCode])) {
+                foreach ($translations[$langCode] as $word) {
+                    $words[] = $word;
+                }
+            }
+        }
+
+        // Sort by length descending to match longer phrases first
+        usort($words, function($a, $b) {
+            return strlen($b) - strlen($a);
+        });
+
+        return $words;
     }
 
     /**
@@ -160,7 +218,8 @@ class DocumentTranslator {
                     $paragraphsToTranslate[] = $paragraphText;
                     $paragraphMapping[] = [
                         'text' => $paragraphText,
-                        'nodes' => $nodeList
+                        'nodes' => $nodeList,
+                        'paragraph' => $paragraph
                     ];
                 }
             }
@@ -179,23 +238,31 @@ class DocumentTranslator {
                 return false;
             }
 
-            // Replace text in paragraphs
+            // Get fixed words for this language
+            $fixedWords = $this->getFixedWordsForLanguage($targetLanguage);
+
+            // Replace text in paragraphs and apply bold to fixed words
             foreach ($paragraphMapping as $index => $mapping) {
                 if (!isset($translatedParagraphs[$index])) {
                     continue;
                 }
 
-                $originalText = $mapping['text'];
                 $translatedText = $translatedParagraphs[$index];
                 $nodes = $mapping['nodes'];
+                $paragraph = $mapping['paragraph'];
 
-                // Replace text: put all translated text in first node, clear others
-                if (count($nodes) > 0) {
-                    $nodes[0]->nodeValue = $translatedText;
-                    
-                    // Clear other nodes in the same paragraph
-                    for ($i = 1; $i < count($nodes); $i++) {
-                        $nodes[$i]->nodeValue = '';
+                // Apply bold formatting to fixed words
+                if (!empty($fixedWords)) {
+                    $this->applyBoldToFixedWords($dom, $xpath, $paragraph, $nodes, $translatedText, $fixedWords);
+                } else {
+                    // No fixed words, just replace text normally
+                    if (count($nodes) > 0) {
+                        $nodes[0]->nodeValue = $translatedText;
+                        
+                        // Clear other nodes in the same paragraph
+                        for ($i = 1; $i < count($nodes); $i++) {
+                            $nodes[$i]->nodeValue = '';
+                        }
                     }
                 }
             }
@@ -223,6 +290,127 @@ class DocumentTranslator {
             error_log('Translation error: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Apply bold formatting to fixed words in translated text
+     *
+     * @param DOMDocument $dom The DOM document
+     * @param DOMXPath $xpath The XPath object
+     * @param DOMNode $paragraph The paragraph node
+     * @param array $nodes Array of text nodes
+     * @param string $translatedText The translated text
+     * @param array $fixedWords Array of words to make bold
+     */
+    private function applyBoldToFixedWords($dom, $xpath, $paragraph, $nodes, $translatedText, $fixedWords) {
+        // Find all occurrences of fixed words (case-insensitive)
+        $segments = $this->splitTextByFixedWords($translatedText, $fixedWords);
+
+        if (count($segments) <= 1) {
+            // No fixed words found, just set the text normally
+            if (count($nodes) > 0) {
+                $nodes[0]->nodeValue = $translatedText;
+                for ($i = 1; $i < count($nodes); $i++) {
+                    $nodes[$i]->nodeValue = '';
+                }
+            }
+            return;
+        }
+
+        // Get the first run element to use as template for styling
+        $firstRun = null;
+        if (count($nodes) > 0) {
+            $firstRun = $nodes[0]->parentNode;
+        }
+
+        // Clear all existing text nodes
+        foreach ($nodes as $node) {
+            $node->nodeValue = '';
+        }
+
+        // Remove existing runs from paragraph (we'll rebuild them)
+        $runsToRemove = $xpath->query('.//w:r', $paragraph);
+        foreach ($runsToRemove as $run) {
+            $run->parentNode->removeChild($run);
+        }
+
+        // Create new runs for each segment
+        $nsUri = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+
+        foreach ($segments as $segment) {
+            // Create w:r (run) element
+            $run = $dom->createElementNS($nsUri, 'w:r');
+
+            // Create w:rPr (run properties) element
+            $runProps = $dom->createElementNS($nsUri, 'w:rPr');
+
+            // Add bold if this is a fixed word
+            if ($segment['bold']) {
+                $bold = $dom->createElementNS($nsUri, 'w:b');
+                $runProps->appendChild($bold);
+            }
+
+            $run->appendChild($runProps);
+
+            // Create w:t (text) element
+            $text = $dom->createElementNS($nsUri, 'w:t');
+            $text->nodeValue = $segment['text'];
+
+            // Preserve spaces
+            $text->setAttribute('xml:space', 'preserve');
+
+            $run->appendChild($text);
+
+            // Append run to paragraph
+            $paragraph->appendChild($run);
+        }
+    }
+
+    /**
+     * Split text into segments, marking which parts match fixed words
+     *
+     * @param string $text The text to split
+     * @param array $fixedWords Array of words to find
+     * @return array Array of segments with 'text' and 'bold' keys
+     */
+    private function splitTextByFixedWords($text, $fixedWords) {
+        if (empty($fixedWords) || empty($text)) {
+            return [['text' => $text, 'bold' => false]];
+        }
+
+        $segments = [];
+        $currentPos = 0;
+        $textLength = mb_strlen($text);
+
+        // Create a pattern that matches any of the fixed words (case-insensitive)
+        // Escape special regex characters and use word boundaries
+        $patterns = [];
+        foreach ($fixedWords as $word) {
+            $patterns[] = preg_quote($word, '/');
+        }
+        $pattern = '/(' . implode('|', $patterns) . ')/iu';
+
+        // Split by the pattern while keeping the delimiters
+        $parts = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+
+        foreach ($parts as $part) {
+            $isBold = false;
+
+            // Check if this part matches any fixed word (case-insensitive)
+            foreach ($fixedWords as $word) {
+                if (mb_strtolower($part) === mb_strtolower($word)) {
+                    $isBold = true;
+                    break;
+                }
+            }
+
+            $segments[] = [
+                'text' => $part,
+                'bold' => $isBold
+            ];
+        }
+
+        return $segments;
     }
 
     /**
@@ -421,7 +609,16 @@ class DocumentTranslator {
             'ZH' => 'ZH',
             'JA' => 'JA',
             'KO' => 'KO',
-            'AR' => 'AR'
+            'AR' => 'AR',
+            'DA' => 'DA',
+            'NL' => 'NL',
+            'ET' => 'ET',
+            'FI' => 'FI',
+            'IS' => 'IS',
+            'LV' => 'LV',
+            'NB' => 'NB',
+            'RO' => 'RO',
+            'SV' => 'SV'
         ];
 
         $upperCode = strtoupper($languageCode);
