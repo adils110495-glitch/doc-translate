@@ -2,9 +2,9 @@
 
 /**
  * Document Translator
- * Translates DOCX documents using DeepL API (via official PHP SDK) while preserving layout and formatting
+ * Translates DOCX documents using DeepL API while preserving layout and formatting
  * Uses paragraph-level translation for better context
- * Applies bold formatting to fixed words from fixed-words.json
+ * Applies bold formatting and hyperlinks to fixed words
  */
 class DocumentTranslator {
 
@@ -12,31 +12,24 @@ class DocumentTranslator {
     private $deeplApiUrl;
     private $translator;
     private $fixedWords = [];
+    private $fixedWordsLinks = [];
+    private $relationshipId = 1000;
 
     public function __construct() {
-        // Load Composer autoloader if available
         $this->loadComposerAutoloader();
-
-        // Load environment variables from .env file
         $this->loadEnv();
-
-        // Load fixed words for bold formatting
         $this->loadFixedWords();
+        $this->loadFixedWordsLinks();
 
-        // Get DeepL API credentials
         $this->deeplApiKey = getenv('DEEPL_API_KEY');
         $this->deeplApiUrl = getenv('DEEPL_API_URL') ?: 'https://api-free.deepl.com';
 
-        // Initialize DeepL Translator if SDK is available and key is set
         if ($this->deeplApiKey && class_exists('DeepL\Translator')) {
             try {
                 $options = [];
-                
-                // Set server URL based on API type
                 if (strpos($this->deeplApiUrl, 'api-free.deepl.com') !== false) {
                     $options['server_url'] = 'https://api-free.deepl.com';
                 }
-                
                 $this->translator = new \DeepL\Translator($this->deeplApiKey, $options);
             } catch (Exception $e) {
                 error_log('DeepL Translator initialization failed: ' . $e->getMessage());
@@ -45,15 +38,11 @@ class DocumentTranslator {
         }
     }
 
-    /**
-     * Load Composer autoloader
-     */
     private function loadComposerAutoloader() {
         $autoloadPaths = [
             dirname(__DIR__) . '/vendor/autoload.php',
             dirname(dirname(__DIR__)) . '/vendor/autoload.php',
         ];
-
         foreach ($autoloadPaths as $path) {
             if (file_exists($path)) {
                 require_once $path;
@@ -62,26 +51,16 @@ class DocumentTranslator {
         }
     }
 
-    /**
-     * Load environment variables from .env file
-     */
     private function loadEnv() {
         $envFile = dirname(__DIR__) . '/.env';
-
         if (file_exists($envFile)) {
             $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
             foreach ($lines as $line) {
-                // Skip comments
-                if (strpos(trim($line), '#') === 0) {
-                    continue;
-                }
-
-                // Parse KEY=VALUE
+                if (strpos(trim($line), '#') === 0) continue;
                 if (strpos($line, '=') !== false) {
                     list($key, $value) = explode('=', $line, 2);
                     $key = trim($key);
                     $value = trim($value);
-
                     if (!empty($key) && !empty($value)) {
                         putenv("$key=$value");
                     }
@@ -90,130 +69,123 @@ class DocumentTranslator {
         }
     }
 
-    /**
-     * Load fixed words from JSON file
-     */
     private function loadFixedWords() {
         $fixedWordsFile = dirname(__DIR__) . '/fixed-words.json';
-
         if (file_exists($fixedWordsFile)) {
             $content = file_get_contents($fixedWordsFile);
             $data = json_decode($content, true);
-
             if ($data) {
                 $this->fixedWords = $data;
             }
         }
     }
 
-    /**
-     * Get all fixed words/phrases for a specific language
-     *
-     * @param string $languageCode Target language code
-     * @return array Array of words/phrases to make bold
-     */
+    private function loadFixedWordsLinks() {
+        $linksFile = dirname(__DIR__) . '/fixed-words-links.json';
+        if (file_exists($linksFile)) {
+            $content = file_get_contents($linksFile);
+            $data = json_decode($content, true);
+            if ($data) {
+                $this->fixedWordsLinks = $data;
+            }
+        }
+    }
+
     private function getFixedWordsForLanguage($languageCode) {
         $langCode = strtolower($languageCode);
-        
-        // Handle language code variations
         if (strpos($langCode, '-') !== false) {
             $langCode = explode('-', $langCode)[0];
         }
-        
-        // Map NB (Norwegian Bokmål) to no
         if ($langCode === 'nb') {
             $langCode = 'no';
         }
-
         $words = [];
-
         foreach ($this->fixedWords as $term => $translations) {
             if (isset($translations[$langCode]) && is_array($translations[$langCode])) {
                 foreach ($translations[$langCode] as $word) {
-                    $words[] = $word;
+                    $words[$word] = $term;
                 }
             }
         }
-
-        // Sort by length descending to match longer phrases first
-        usort($words, function($a, $b) {
+        uksort($words, function($a, $b) {
             return strlen($b) - strlen($a);
         });
-
         return $words;
     }
 
-    /**
-     * Translate a DOCX document
-     *
-     * @param string $sourcePath Path to source DOCX file
-     * @param string $targetPath Path to save translated DOCX file
-     * @param string $targetLanguage Target language code
-     * @return bool Success status
-     */
+    private function getLinkForTerm($term, $languageCode) {
+        $langCode = strtolower($languageCode);
+        if (strpos($langCode, '-') !== false) {
+            $langCode = explode('-', $langCode)[0];
+        }
+        if ($langCode === 'nb') {
+            $langCode = 'no';
+        }
+        
+        if (isset($this->fixedWordsLinks[$langCode][$term])) {
+            return $this->fixedWordsLinks[$langCode][$term];
+        }
+        return null;
+    }
+
     public function translate($sourcePath, $targetPath, $targetLanguage) {
         try {
-            // Copy the original file to preserve structure
             if (!copy($sourcePath, $targetPath)) {
                 return false;
             }
 
-            // DOCX files are ZIP archives - extract and process
             $zip = new ZipArchive();
-
             if ($zip->open($targetPath) !== true) {
                 @unlink($targetPath);
                 return false;
             }
 
-            // Extract document.xml (main content)
             $documentXml = $zip->getFromName('word/document.xml');
-
             if ($documentXml === false) {
                 $zip->close();
                 @unlink($targetPath);
                 return false;
             }
 
-            // Parse XML
+            $relsXml = $zip->getFromName('word/_rels/document.xml.rels');
+            $relsDom = new DOMDocument();
+            if ($relsXml) {
+                $relsDom->loadXML($relsXml);
+            } else {
+                $relsDom->loadXML('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
+            }
+            $relsRoot = $relsDom->documentElement;
+            $newRelationships = [];
+
             $dom = new DOMDocument();
             $dom->loadXML($documentXml);
 
-            // Find all paragraphs
             $xpath = new DOMXPath($dom);
             $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+            $xpath->registerNamespace('r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
 
-            // Get all paragraph elements (w:p)
             $paragraphs = $xpath->query('//w:p');
-
             if ($paragraphs->length === 0) {
                 $zip->close();
-                return true; // Empty document is technically successful
+                return true;
             }
 
-            // Extract paragraphs for translation
             $paragraphsToTranslate = [];
-            $paragraphMapping = []; // Maps paragraph index to its text nodes
+            $paragraphMapping = [];
 
             foreach ($paragraphs as $paragraphIndex => $paragraph) {
-                // Get all text nodes within this paragraph
                 $textNodes = $xpath->query('.//w:t', $paragraph);
-                
-                if ($textNodes->length === 0) {
-                    continue;
-                }
+                if ($textNodes->length === 0) continue;
 
-                // Combine all text in the paragraph
                 $paragraphText = '';
                 $nodeList = [];
-                
                 foreach ($textNodes as $node) {
                     $text = $node->nodeValue;
                     $paragraphText .= $text;
                     $nodeList[] = $node;
                 }
 
-                // Only translate non-empty paragraphs
                 if (!empty(trim($paragraphText))) {
                     $paragraphsToTranslate[] = $paragraphText;
                     $paragraphMapping[] = [
@@ -226,64 +198,57 @@ class DocumentTranslator {
 
             if (empty($paragraphsToTranslate)) {
                 $zip->close();
-                return true; // No content to translate
+                return true;
             }
 
-            // Translate all paragraphs using DeepL
             $translatedParagraphs = $this->translateTexts($paragraphsToTranslate, $targetLanguage);
-
             if ($translatedParagraphs === false) {
                 $zip->close();
                 @unlink($targetPath);
                 return false;
             }
 
-            // Get fixed words for this language
             $fixedWords = $this->getFixedWordsForLanguage($targetLanguage);
 
-            // Replace text in paragraphs and apply bold to fixed words
             foreach ($paragraphMapping as $index => $mapping) {
-                if (!isset($translatedParagraphs[$index])) {
-                    continue;
-                }
+                if (!isset($translatedParagraphs[$index])) continue;
 
                 $translatedText = $translatedParagraphs[$index];
                 $nodes = $mapping['nodes'];
                 $paragraph = $mapping['paragraph'];
 
-                // Apply bold formatting to fixed words
-                if (!empty($fixedWords)) {
-                    $this->applyBoldToFixedWords($dom, $xpath, $paragraph, $nodes, $translatedText, $fixedWords);
-                } else {
-                    // No fixed words, just replace text normally
-                    if (count($nodes) > 0) {
-                        $nodes[0]->nodeValue = $translatedText;
-                        
-                        // Clear other nodes in the same paragraph
-                        for ($i = 1; $i < count($nodes); $i++) {
-                            $nodes[$i]->nodeValue = '';
-                        }
-                    }
-                }
+                $this->applyTranslationWithLinks($dom, $xpath, $paragraph, $nodes, $translatedText, $fixedWords, $targetLanguage, $newRelationships);
             }
 
-            // Save modified XML back to ZIP
+            foreach ($newRelationships as $relId => $url) {
+                $rel = $relsDom->createElement('Relationship');
+                $rel->setAttribute('Id', $relId);
+                $rel->setAttribute('Type', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink');
+                $rel->setAttribute('Target', $url);
+                $rel->setAttribute('TargetMode', 'External');
+                $relsRoot->appendChild($rel);
+            }
+
             $modifiedXml = $dom->saveXML();
+            $modifiedRelsXml = $relsDom->saveXML();
 
             if (!$zip->deleteName('word/document.xml')) {
                 $zip->close();
                 @unlink($targetPath);
                 return false;
             }
-
             if (!$zip->addFromString('word/document.xml', $modifiedXml)) {
                 $zip->close();
                 @unlink($targetPath);
                 return false;
             }
 
-            $zip->close();
+            if ($relsXml) {
+                $zip->deleteName('word/_rels/document.xml.rels');
+            }
+            $zip->addFromString('word/_rels/document.xml.rels', $modifiedRelsXml);
 
+            $zip->close();
             return true;
 
         } catch (Exception $e) {
@@ -292,22 +257,20 @@ class DocumentTranslator {
         }
     }
 
-    /**
-     * Apply bold formatting to fixed words in translated text
-     *
-     * @param DOMDocument $dom The DOM document
-     * @param DOMXPath $xpath The XPath object
-     * @param DOMNode $paragraph The paragraph node
-     * @param array $nodes Array of text nodes
-     * @param string $translatedText The translated text
-     * @param array $fixedWords Array of words to make bold
-     */
-    private function applyBoldToFixedWords($dom, $xpath, $paragraph, $nodes, $translatedText, $fixedWords) {
-        // Find all occurrences of fixed words (case-insensitive)
+    private function applyTranslationWithLinks($dom, $xpath, $paragraph, $nodes, $translatedText, $fixedWords, $targetLanguage, &$newRelationships) {
         $segments = $this->splitTextByFixedWords($translatedText, $fixedWords);
 
-        if (count($segments) <= 1) {
-            // No fixed words found, just set the text normally
+        // Check if any fixed words were found
+        $hasFixedWords = false;
+        foreach ($segments as $segment) {
+            if ($segment['bold']) {
+                $hasFixedWords = true;
+                break;
+            }
+        }
+
+        // If no fixed words, just replace text in existing nodes (preserves formatting)
+        if (!$hasFixedWords) {
             if (count($nodes) > 0) {
                 $nodes[0]->nodeValue = $translatedText;
                 for ($i = 1; $i < count($nodes); $i++) {
@@ -317,109 +280,101 @@ class DocumentTranslator {
             return;
         }
 
-        // Get the first run element to use as template for styling
-        $firstRun = null;
-        if (count($nodes) > 0) {
-            $firstRun = $nodes[0]->parentNode;
-        }
-
-        // Clear all existing text nodes
-        foreach ($nodes as $node) {
-            $node->nodeValue = '';
-        }
-
-        // Remove existing runs from paragraph (we'll rebuild them)
+        // Remove existing runs and hyperlinks
         $runsToRemove = $xpath->query('.//w:r', $paragraph);
         foreach ($runsToRemove as $run) {
             $run->parentNode->removeChild($run);
         }
+        $hyperlinksToRemove = $xpath->query('.//w:hyperlink', $paragraph);
+        foreach ($hyperlinksToRemove as $hl) {
+            $hl->parentNode->removeChild($hl);
+        }
 
-        // Create new runs for each segment
         $nsUri = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+        $rNsUri = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
 
         foreach ($segments as $segment) {
-            // Create w:r (run) element
             $run = $dom->createElementNS($nsUri, 'w:r');
-
-            // Create w:rPr (run properties) element
             $runProps = $dom->createElementNS($nsUri, 'w:rPr');
 
-            // Add bold if this is a fixed word
+            // ONLY add bold/color/underline for fixed words
             if ($segment['bold']) {
                 $bold = $dom->createElementNS($nsUri, 'w:b');
                 $runProps->appendChild($bold);
+                
+                $color = $dom->createElementNS($nsUri, 'w:color');
+                $color->setAttribute('w:val', '0000FF');
+                $runProps->appendChild($color);
+                
+                $underline = $dom->createElementNS($nsUri, 'w:u');
+                $underline->setAttribute('w:val', 'single');
+                $runProps->appendChild($underline);
             }
+            // For non-fixed words, runProps stays empty (no formatting = default/normal text)
 
             $run->appendChild($runProps);
-
-            // Create w:t (text) element
+            
             $text = $dom->createElementNS($nsUri, 'w:t');
             $text->nodeValue = $segment['text'];
-
-            // Preserve spaces
             $text->setAttribute('xml:space', 'preserve');
-
             $run->appendChild($text);
 
-            // Append run to paragraph
-            $paragraph->appendChild($run);
+            // Wrap in hyperlink if fixed word has a link
+            if ($segment['bold'] && isset($segment['term'])) {
+                $link = $this->getLinkForTerm($segment['term'], $targetLanguage);
+                if ($link) {
+                    $relId = 'rId' . $this->relationshipId++;
+                    $newRelationships[$relId] = $link;
+
+                    $hyperlink = $dom->createElementNS($nsUri, 'w:hyperlink');
+                    $hyperlink->setAttributeNS($rNsUri, 'r:id', $relId);
+                    $hyperlink->appendChild($run);
+                    $paragraph->appendChild($hyperlink);
+                } else {
+                    $paragraph->appendChild($run);
+                }
+            } else {
+                $paragraph->appendChild($run);
+            }
         }
     }
 
-    /**
-     * Split text into segments, marking which parts match fixed words
-     *
-     * @param string $text The text to split
-     * @param array $fixedWords Array of words to find
-     * @return array Array of segments with 'text' and 'bold' keys
-     */
     private function splitTextByFixedWords($text, $fixedWords) {
         if (empty($fixedWords) || empty($text)) {
-            return [['text' => $text, 'bold' => false]];
+            return [['text' => $text, 'bold' => false, 'term' => null]];
         }
 
-        $segments = [];
-        $currentPos = 0;
-        $textLength = mb_strlen($text);
-
-        // Create a pattern that matches any of the fixed words (case-insensitive)
-        // Escape special regex characters and use word boundaries
+        $wordList = array_keys($fixedWords);
+        
         $patterns = [];
-        foreach ($fixedWords as $word) {
+        foreach ($wordList as $word) {
             $patterns[] = preg_quote($word, '/');
         }
         $pattern = '/(' . implode('|', $patterns) . ')/iu';
 
-        // Split by the pattern while keeping the delimiters
         $parts = preg_split($pattern, $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
 
+        $segments = [];
         foreach ($parts as $part) {
             $isBold = false;
-
-            // Check if this part matches any fixed word (case-insensitive)
-            foreach ($fixedWords as $word) {
+            $term = null;
+            foreach ($fixedWords as $word => $termKey) {
                 if (mb_strtolower($part) === mb_strtolower($word)) {
                     $isBold = true;
+                    $term = $termKey;
                     break;
                 }
             }
-
             $segments[] = [
                 'text' => $part,
-                'bold' => $isBold
+                'bold' => $isBold,
+                'term' => $term
             ];
         }
 
         return $segments;
     }
 
-    /**
-     * Translate an array of texts using DeepL API
-     *
-     * @param array $texts Array of texts to translate
-     * @param string $targetLanguage Target language code
-     * @return array|false Translated texts or false on error
-     */
     private function translateTexts($texts, $targetLanguage) {
         if (empty($this->deeplApiKey)) {
             error_log('DeepL API key not configured');
@@ -430,123 +385,46 @@ class DocumentTranslator {
             return [];
         }
 
-        // Check if DeepL SDK is available
-        if ($this->translator && $this->translator instanceof \DeepL\Translator) {
-            return $this->translateWithSDK($texts, $targetLanguage);
-        } else {
-            // Fallback to cURL implementation
-            return $this->translateWithCurl($texts, $targetLanguage);
-        }
+        return $this->translateWithCurl($texts, $targetLanguage);
     }
 
-    /**
-     * Translate texts using DeepL PHP SDK
-     *
-     * @param array $texts Array of texts to translate
-     * @param string $targetLanguage Target language code
-     * @return array|false Translated texts or false on error
-     */
-    private function translateWithSDK($texts, $targetLanguage) {
-        try {
-            // Convert language code format if needed
-            $targetLang = $this->convertLanguageCode($targetLanguage);
-
-            // Translate all texts in batches
-            // DeepL SDK handles batching automatically
-            $options = [
-                'preserve_formatting' => true,
-                'split_sentences' => 'off',
-                'tag_handling' => 'xml'
-            ];
-
-            $results = $this->translator->translateText($texts, null, $targetLang, $options);
-
-            // Extract translated texts
-            $translations = [];
-            if (is_array($results)) {
-                foreach ($results as $result) {
-                    $translations[] = $result->text;
-                }
-            } else {
-                // Single result
-                $translations[] = $results->text;
-            }
-
-            return $translations;
-
-        } catch (\DeepL\DeepLException $e) {
-            error_log('DeepL SDK error: ' . $e->getMessage());
-            return false;
-        } catch (Exception $e) {
-            error_log('Translation error: ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Translate texts using cURL (fallback when SDK is not available)
-     *
-     * @param array $texts Array of texts to translate
-     * @param string $targetLanguage Target language code
-     * @return array|false Translated texts or false on error
-     */
     private function translateWithCurl($texts, $targetLanguage) {
-        // Convert language code format if needed
         $targetLang = $this->convertLanguageCode($targetLanguage);
 
-        // DeepL API supports up to 50 texts per request
         $batchSize = 50;
         $batches = array_chunk($texts, $batchSize);
         $allTranslations = [];
 
         foreach ($batches as $batch) {
             $translations = $this->translateBatchCurl($batch, $targetLang);
-
             if ($translations === false) {
                 return false;
             }
-
             $allTranslations = array_merge($allTranslations, $translations);
         }
 
         return $allTranslations;
     }
 
-    /**
-     * Translate a batch of texts using cURL
-     *
-     * @param array $texts Batch of texts to translate
-     * @param string $targetLang Target language code
-     * @return array|false Translated texts or false on error
-     */
     private function translateBatchCurl($texts, $targetLang) {
         $url = $this->deeplApiUrl . '/v2/translate';
 
-        // Prepare POST data
-        $postData = [
-            'auth_key' => $this->deeplApiKey,
-            'target_lang' => $targetLang,
-            'preserve_formatting' => '1',
-            'split_sentences' => '0',
-            'tag_handling' => 'xml'
-        ];
-
-        // Add all texts
+        $postFields = 'target_lang=' . urlencode($targetLang);
         foreach ($texts as $text) {
-            $postData['text'][] = $text;
+            $postFields .= '&text=' . urlencode($text);
         }
 
-        // Initialize cURL
         $ch = curl_init();
 
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($postData),
+            CURLOPT_POSTFIELDS => $postFields,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_TIMEOUT => 60,
+            CURLOPT_TIMEOUT => 120,
             CURLOPT_HTTPHEADER => [
+                'Authorization: DeepL-Auth-Key ' . $this->deeplApiKey,
                 'Content-Type: application/x-www-form-urlencoded'
             ]
         ]);
@@ -557,23 +435,19 @@ class DocumentTranslator {
 
         curl_close($ch);
 
-        // Check for cURL errors
         if ($response === false) {
             error_log('DeepL API cURL error: ' . $curlError);
             return false;
         }
 
-        // Parse response
         $result = json_decode($response, true);
 
-        // Check for API errors
         if ($httpCode !== 200) {
             $errorMessage = isset($result['message']) ? $result['message'] : 'Unknown error';
             error_log('DeepL API error (HTTP ' . $httpCode . '): ' . $errorMessage);
             return false;
         }
 
-        // Extract translated texts
         $translations = [];
         if (isset($result['translations']) && is_array($result['translations'])) {
             foreach ($result['translations'] as $translation) {
@@ -587,14 +461,7 @@ class DocumentTranslator {
         return $translations;
     }
 
-    /**
-     * Convert language code to DeepL format
-     *
-     * @param string $languageCode Input language code
-     * @return string DeepL language code
-     */
     private function convertLanguageCode($languageCode) {
-        // Map common language codes to DeepL format
         $languageMap = [
             'EN-US' => 'EN-US',
             'EN-GB' => 'EN-GB',
@@ -622,60 +489,34 @@ class DocumentTranslator {
         ];
 
         $upperCode = strtoupper($languageCode);
-
         return isset($languageMap[$upperCode]) ? $languageMap[$upperCode] : $upperCode;
     }
 
-    /**
-     * Check if DeepL API is configured
-     *
-     * @return bool
-     */
     public function isConfigured() {
         return !empty($this->deeplApiKey);
     }
 
-    /**
-     * Get API usage statistics
-     *
-     * @return array|false Usage data or false on error
-     */
     public function getUsage() {
         if (empty($this->deeplApiKey)) {
             return false;
         }
 
-        // Use SDK if available
-        if ($this->translator && $this->translator instanceof \DeepL\Translator) {
-            try {
-                $usage = $this->translator->getUsage();
-                return [
-                    'character_count' => $usage->character->count,
-                    'character_limit' => $usage->character->limit
-                ];
-            } catch (Exception $e) {
-                error_log('DeepL usage check failed: ' . $e->getMessage());
-                return false;
-            }
-        }
-
-        // Fallback to cURL
         $url = $this->deeplApiUrl . '/v2/usage';
 
         $ch = curl_init();
-
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query(['auth_key' => $this->deeplApiKey]),
+            CURLOPT_POST => false,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_TIMEOUT => 10
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: DeepL-Auth-Key ' . $this->deeplApiKey
+            ]
         ]);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
         curl_close($ch);
 
         if ($httpCode === 200) {

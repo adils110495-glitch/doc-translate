@@ -78,25 +78,25 @@
                     <label>File Source</label>
                     <div class="radio-group">
                         <label class="radio-label">
-                            <input type="radio" name="file_source" value="upload" checked onchange="toggleFileSource()">
+                            <input type="radio" name="file_source" value="upload" onchange="toggleFileSource()">
                             <span>Upload New File</span>
                         </label>
                         <label class="radio-label">
-                            <input type="radio" name="file_source" value="existing" onchange="toggleFileSource()">
+                            <input type="radio" name="file_source" value="existing" checked onchange="toggleFileSource()">
                             <span>Use Existing File</span>
                         </label>
                     </div>
                 </div>
 
                 <!-- Upload New File -->
-                <div id="upload-section" class="form-group">
+                <div id="upload-section" class="form-group" style="display: none;">
                     <label for="docx-file">DOCX File *</label>
                     <input type="file" id="docx-file" name="docx_file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
                     <small>Only .docx files are allowed</small>
                 </div>
 
                 <!-- Select Existing File -->
-                <div id="existing-section" class="form-group" style="display: none;">
+                <div id="existing-section" class="form-group">
                     <label for="existing-file">Select Existing File *</label>
                     <select id="existing-file" name="existing_file" class="file-select">
                         <option value="">Loading files...</option>

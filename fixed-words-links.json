@@ -1,0 +1,122 @@
+{
+  "en": {
+    "delay": "https://www.lennuabi.com/flight-delay-compensation/",
+    "cancelled": "https://www.lennuabi.com/flight-cancellation-compensation/",
+    "missed": "https://www.lennuabi.com/missed-connection-compensation/",
+    "airline_strike": "https://www.lennuabi.com/airline-strike-compensation/",
+    "overbooking": "https://www.lennuabi.com/overbooked-flight-compensation/",
+    "denied_boarding": "https://www.lennuabi.com/denied-boarding-compensation/",
+    "passengers_rights": "https://www.lennuabi.com/your-rights/",
+    "claim": "https://www.lennuabi.com/submit-claim/"
+  },
+  "da": {
+    "delay": "https://www.lennuabi.com/da/kompensation-for-flyforsinkelse/",
+    "cancelled": "https://www.lennuabi.com/da/kompensation-for-aflyst-fly/",
+    "missed": "https://www.lennuabi.com/da/kompensation-for-en-misset-flyrejse/",
+    "airline_strike": "https://www.lennuabi.com/da/kompensation-for-strejke-hos-flyselskab/",
+    "overbooking": "https://www.lennuabi.com/da/kompensation-for-overbooking/",
+    "denied_boarding": "https://www.lennuabi.com/da/kompensation-for-afvist-boarding/",
+    "passengers_rights": "https://www.lennuabi.com/da/kend-dine-rettigheder/",
+    "claim": "https://www.lennuabi.com/da/submit-claim/"
+  },
+  "nl": {
+    "delay": "https://www.lennuabi.com/nl/compensatie-bij-vluchtvertraging/",
+    "cancelled": "https://www.lennuabi.com/nl/compensatie-bij-vluchtannulering/",
+    "missed": "https://www.lennuabi.com/nl/compensatie-bij-gemiste-aansluiting/",
+    "airline_strike": "https://www.lennuabi.com/nl/compensatie-bij-staking-van-de-luchtvaartmaatschappij/",
+    "overbooking": "https://www.lennuabi.com/nl/compensatie-bij-overboeking/",
+    "denied_boarding": "https://www.lennuabi.com/nl/compensatie-bij-geweigerde-instap/",
+    "passengers_rights": "https://www.lennuabi.com/nl/thekki-rettindi-thin/",
+    "claim": "https://www.lennuabi.com/nl/declaratie-indienen/"
+  },
+  "et": {
+    "delay": "https://www.lennuabi.com/ee/leenu-hilinemise-huvitis/",
+    "cancelled": "https://www.lennuabi.com/ee/lennu-tuhistamise-huvitis/",
+    "missed": "https://www.lennuabi.com/ee/uhenduse-kaotamise-huvitis/",
+    "airline_strike": "https://www.lennuabi.com/ee/huvitis-lennufirma-streigi-korral/",
+    "overbooking": "https://www.lennuabi.com/ee/huvitis-ulebroneeringu-korral/",
+    "denied_boarding": "https://www.lennuabi.com/ee/huvitis-lennukist-mahajaamise-korral/",
+    "passengers_rights": "https://www.lennuabi.com/ee/lennureisija-igused/",
+    "claim": "https://www.lennuabi.com/ee/esita-avaldus/"
+  },
+  "fi": {
+    "delay": "https://www.lennuabi.com/fi/korvaus-lennon-viivastymisesta/",
+    "cancelled": "https://www.lennuabi.com/fi/korvaus-lennon-peruuntumisesta/",
+    "missed": "https://www.lennuabi.com/fi/korvaus-jatkolennolta-myohastymisesta/",
+    "airline_strike": "https://www.lennuabi.com/fi/korvaus-lentoyhtion-lakosta/",
+    "overbooking": "https://www.lennuabi.com/fi/korvaus-ylivaratusta-lennosta/",
+    "denied_boarding": "https://www.lennuabi.com/fi/korvaus-lennolle-paasyn-epaamisesta/",
+    "passengers_rights": "https://www.lennuabi.com/fi/korvaus-lennon-viivastymisesta/",
+    "claim": "https://www.lennuabi.com/fi/submit-claim/"
+  },
+  "de": {
+    "delay": "https://www.lennuabi.com/de/entschadigung-bei-flugverspatung/",
+    "cancelled": "https://www.lennuabi.com/de/entschadigung-bei-flugannullierung/",
+    "missed": "https://www.lennuabi.com/de/entschadigung-bei-verpasstem-anschlussflug/",
+    "airline_strike": "https://www.lennuabi.com/de/entschadigung-bei-streiks-der-fluggesellschaft/",
+    "overbooking": "https://www.lennuabi.com/de/entschadigung-bei-uberbuchung/",
+    "denied_boarding": "https://www.lennuabi.com/de/entschadigung-bei-verweigerter-beforderung/",
+    "passengers_rights": "https://www.lennuabi.com/de/kennen-sie-ihre-rechte/",
+    "claim": "https://www.lennuabi.com/de/submit-claim/"
+  },
+  "is": {
+    "delay": "https://www.lennuabi.com/is/baetur-vegna-seinkunar-a-flugi/",
+    "cancelled": "https://www.lennuabi.com/is/baetur-vegna-aflysingar-a-flugi/",
+    "missed": "https://www.lennuabi.com/is/baetur-vegna-misst-af-tengiflugi/",
+    "airline_strike": "https://www.lennuabi.com/is/baetur-vegna-verkfalls-flugfelaga/",
+    "overbooking": "https://www.lennuabi.com/is/baetur-vegna-ofbokunar/",
+    "denied_boarding": "https://www.lennuabi.com/is/baetur-fyrir-synjada-um-bord/",
+    "passengers_rights": "https://www.lennuabi.com/is/thekktu-rettindi-thin/",
+    "claim": "https://www.lennuabi.com/is/leggja-fram-krofu/"
+  },
+  "lv": {
+    "delay": "https://www.lennuabi.com/lv/lidojuma-kavesanas-kompensacija/",
+    "cancelled": "https://www.lennuabi.com/lv/lidojuma-atcelsanas-kompensacija/",
+    "missed": "https://www.lennuabi.com/lv/nokaveta-savienoto-lidojumu-kompensacija/",
+    "airline_strike": "https://www.lennuabi.com/lv/aviokompanijas-streika-kompensacija/",
+    "overbooking": "https://www.lennuabi.com/lv/virsrezervacijas-kompensacija/",
+    "denied_boarding": "https://www.lennuabi.com/lv/atteikta-iekapsanas-kompensacija/",
+    "passengers_rights": "https://www.lennuabi.com/lv/zinie-savas-tiesibas/",
+    "claim": "https://www.lennuabi.com/lv/iesniegt-pretenziju/"
+  },
+  "no": {
+    "delay": "https://www.lennuabi.com/no/kompensasjon-for-flyforsinkelse/",
+    "cancelled": "https://www.lennuabi.com/no/kompensasjon-for-kansellert-fly/",
+    "missed": "https://www.lennuabi.com/no/kompensasjon-for-tapt-tilkoblingsfly/",
+    "airline_strike": "https://www.lennuabi.com/no/kompensasjon-for-flystreik/",
+    "overbooking": "https://www.lennuabi.com/no/kompensasjon-for-overbooking/",
+    "denied_boarding": "https://www.lennuabi.com/no/kompensasjon-for-nektet-ombordstigning/",
+    "passengers_rights": "https://www.lennuabi.com/no/kjenn-dine-rettigheder/",
+    "claim": "https://www.lennuabi.com/no/submit-claim/"
+  },
+  "ro": {
+    "delay": "https://www.lennuabi.com/ro/despagubiri-pentru-intarzierea-zborului/",
+    "cancelled": "https://www.lennuabi.com/ro/despagubiri-pentru-anularea-zborului/",
+    "missed": "https://www.lennuabi.com/ro/despagubiri-pentru-ratarea-zborului-de-legatura/",
+    "airline_strike": "https://www.lennuabi.com/ro/despagubiri-in-caz-de-greva-a-companiilor-aeriene/",
+    "overbooking": "https://www.lennuabi.com/ro/despagubiri-pentru-suprarezervare/",
+    "denied_boarding": "https://www.lennuabi.com/ro/despagubiri-pentru-refuzul-imbarcarii/",
+    "passengers_rights": "https://www.lennuabi.com/ro/aflati-va-drepturile/",
+    "claim": "https://www.lennuabi.com/ro/submit-claim/"
+  },
+  "ru": {
+    "delay": "https://www.lennuabi.com/ru/kompensacija-za-zaderzhku-reisa/",
+    "cancelled": "https://www.lennuabi.com/ru/kompensacija-za-otmenu-reisa/",
+    "missed": "https://www.lennuabi.com/ru/kompensacija-za-propushchenuyu-peresadku/",
+    "airline_strike": "https://www.lennuabi.com/ru/kompensacija-za-zabastovku-aviakompanii/",
+    "overbooking": "https://www.lennuabi.com/ru/kompensacija-za-overbuking/",
+    "denied_boarding": "https://www.lennuabi.com/ru/kompensacija-za-otkaz-v-pasadke/",
+    "passengers_rights": "https://www.lennuabi.com/ru/prava-aviapasazhira/",
+    "claim": "https://www.lennuabi.com/ru/esita-avaldus/?step=1"
+  },
+  "sv": {
+    "delay": "https://www.lennuabi.com/sv/ersattning-vid-flygforsening/",
+    "cancelled": "https://www.lennuabi.com/sv/ersattning-for-installt-flyg/",
+    "missed": "https://www.lennuabi.com/sv/kompensation-for-missad-anslutning/",
+    "airline_strike": "https://www.lennuabi.com/sv/ersattning-vid-strejk-hos-flygbolag/",
+    "overbooking": "https://www.lennuabi.com/sv/ersattning-for-overbokning/",
+    "denied_boarding": "https://www.lennuabi.com/sv/ersattning-for-nekad-ombordstigning/",
+    "passengers_rights": "https://www.lennuabi.com/sv/kann-till-dina-rattigheter/",
+    "claim": "https://www.lennuabi.com/sv/submit-claim/"
+  }
+}
